@@ -2,8 +2,8 @@ import math
 import random
 import pygame
 pygame.init()
-width = 900
-height = 400
+width = 600
+height = 500
 
 window = pygame.display.set_mode((width,height))
 running = True
@@ -12,18 +12,15 @@ from math import cos, sin, pi
 
 
 class NeuralNetwork:
-    weights = []
-    biases = []
-    sizes = []
     def __init__(self):
-        self.sizes = [3, 3, 1]
+        self.sizes = [3, 3, 2]
         self.weights = [np.random.randn(y, x) for x, y in zip(self.sizes[:-1], self.sizes[1:])]
         self.biases = [np.random.randn(y, 1) for y in self.sizes[1:]]
 
     def getOutput(self, a): #input is input neurons.
         for b, w in zip(self.biases, self.weights):
-            a = sigmoid(np.dot(w, a) + np.concatenate([np.array(i) for i in b]))
-        return a - 0.5
+            a = np.dot(w, a) + np.concatenate([np.array(i) for i in b])
+        return a
 
     
 
@@ -31,12 +28,12 @@ class NeuralNetwork:
 
 class Sensors(): #Sensors for each car
     magnitude = 100
-    angle = 45
+    angle = 60
     sensorcount = 3
-    sensorSignals = [0 for i in range(math.floor(-(sensorcount-1)/2), math.ceil(sensorcount/2))]
 
     def __init__(self):
-        pass
+        self.sensorSignals = [0 for i in range(math.floor(-(self.sensorcount-1)/2), math.ceil(self.sensorcount/2))]
+
     
 
     def updateSensorSignals(self, position, velocity): #velocity being the speed vector of the car
@@ -56,24 +53,25 @@ class Sensors(): #Sensors for each car
             except:
                 self.sensorSignals[i] = 1
                 
-    
 
-class Car: #a single car, which also creates a neural network of its own, and senors of its own
+
+class Car: 
+    '''a single car, which also creates a neural network of its own, and senors of its own'''
     size = (10,10)
-    position = []
-    velocity = []
-    sensor = Sensors()
 
     def __init__(self):
         self.position = np.array([60.0, 60.0])
-        self.velocity = np.array([0.1, 0.1])
+        self.velocity = np.array([0.0, 0.3])
         self.network = NeuralNetwork()
+        self.sensor = Sensors()
 
     def getNewPlacement(self):
         #update sensors
         self.sensor.updateSensorSignals(self.position, self.velocity)
         #give the sensors values as input
-        degree = self.network.getOutput(self.sensor.sensorSignals)
+        output = self.network.getOutput(self.sensor.sensorSignals)
+        degree = output[0]
+        speed = output[1]
         self.rotateCar(degree)
         self.position += self.velocity
         return pygame.Rect(car.position[0], car.position[1], car.size[0], car.size[1])
@@ -101,8 +99,8 @@ def rotate(vector, degree):
 
 
 
-carsystem = Carsystem(100)
-background = pygame.image.load("track.png")
+carsystem = Carsystem(30)
+background = pygame.image.load("track.png").convert()
 
 while running:
     for event in pygame.event.get():  
@@ -114,7 +112,6 @@ while running:
     
     for car in carsystem.car:
         pygame.draw.rect(window, pygame.Color("blue"), car.getNewPlacement())
-        pygame.draw.line(window, pygame.Color("white"), car.position, car.position+100*car.velocity)
 
     # Update our window
     pygame.display.flip()
