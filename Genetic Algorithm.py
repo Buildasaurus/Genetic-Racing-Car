@@ -9,8 +9,8 @@ pr = cProfile.Profile()
 pr.enable()'''
 
 pygame.init()
-width = 600
-height = 500
+width = 440
+height = 600
 
 window = pygame.display.set_mode((width,height))
 running = True
@@ -38,8 +38,8 @@ class NeuralNetwork:
 
 
 class Sensors(): #Sensors for each car
-    magnitude = 100
-    angle = 60
+    magnitude = 20
+    angle = 80
     sensorcount = 3
 
     def __init__(self):
@@ -51,7 +51,8 @@ class Sensors(): #Sensors for each car
         for i in range(math.floor(-(self.sensorcount-1)/2), math.ceil(self.sensorcount/2)):
             rotatedVelocity = velocity.rotate(2*i/(self.sensorcount)*self.angle)
             try:
-                sensorXY = (int(x + rotatedVelocity[0]*self.magnitude), int(y + rotatedVelocity[1]*self.magnitude))
+                sensorXY = rotatedVelocity.normalize()*self.magnitude + position
+                sensorXY = (int(sensorXY.x), int(sensorXY.y))
                 a = pygame.Surface.get_at(window, sensorXY)
                 pygame.Surface.set_at(window, sensorXY, pygame.Color("blue"))
 
@@ -71,22 +72,51 @@ class Car:
     size = (10,10)
 
     def __init__(self):
-        self.position = pygame.Vector2(60.0, 60.0)
-        self.velocity = pygame.Vector2(0.0, 0.5)
+        self.position = pygame.Vector2(195.0, 18.0)
+        self.velocity = pygame.Vector2(-0.5, 0)
         self.network = NeuralNetwork()
         self.sensor = Sensors()
+        self.laps = 0
+        self.lastColor = (69, 115, 197, 255)
 
-    def getNewPlacement(self):
+    def updatePlacement(self):
         #update sensors
         self.sensor.updateSensorSignals(self.position, self.velocity)
+
+        #update fitness - if crossed new checkpoint
+
+
         #give the sensors values as input
         output = self.network.getOutput(self.sensor.sensorSignals)
-        degree = output[0]
-        speed = output[1]
+        degree = output[0] 
+        speed = sigmoid(output[1]) + 0.0001
+
+        #punish cars on white - and count laps
+        try:
+            a = pygame.Surface.get_at(window, (int(self.position.x), int(self.position.y)))
+            if a == pygame.Color("white"):
+                speed *= 0.1 
+            elif a == (1, 177, 81, 255) and self.lastColor != a: #if first time on green
+                self.laps += 1
+                self.lastColor = a
+            elif a == (69, 115, 197, 255) and self.lastColor != a: #if first time on blue
+                self.laps += 1
+                self.lastColor = a
+        except:
+            speed = 0.0001
+
+
+
+
+        #return the new placement of the car.
         self.rotateCar(degree)
+        self.velocity.scale_to_length(speed)
         self.position += self.velocity
-        return pygame.Rect(car.position[0], car.position[1], car.size[0], car.size[1])
         
+    def getPlacement(self):
+        return pygame.Rect(car.position[0], car.position[1], car.size[0], car.size[1])
+
+
     def rotateCar(self, angle):
         self.velocity = self.velocity.rotate(angle)
 
@@ -104,8 +134,8 @@ def sigmoid(z):
 
 
 
-carsystem = Carsystem(10)
-background = pygame.image.load("track.png")
+carsystem = Carsystem(100)
+background = pygame.image.load("lilleRacerbaneMedStreger.png")
 
 clock = pygame.time.Clock()  
 
@@ -118,12 +148,31 @@ while running:
     window.fill(pygame.Color("white"))
     window.blit(background, (0,0))
 
+
     for car in carsystem.car:
-        pygame.draw.rect(window, pygame.Color("blue"), car.getNewPlacement())
+        car.updatePlacement()
+    
+    for car in carsystem.car:
+        pygame.draw.rect(window, pygame.Color("blue"), car.getPlacement())
     clock.tick(60)
 
     if i%60 == 0:
         print(clock.get_fps())
+        maxfitness = 0
+        secondbestFitness = 0
+        for car in carsystem.car:
+            if car.laps > maxfitness:
+                secondbestFitness = maxfitness
+                maxfitness = car.laps
+            elif car.laps > secondbestFitness:
+                secondbestFitness = car.laps
+        print(maxfitness, secondbestFitness)
+        strbuilder = ""
+        for car in carsystem.car:
+            strbuilder += " " + str(car.laps)
+        print(strbuilder)
+
+
     i += 1
 
     # Update our window
