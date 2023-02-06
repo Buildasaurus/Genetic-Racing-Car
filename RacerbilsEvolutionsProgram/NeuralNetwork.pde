@@ -21,6 +21,11 @@ class NeuralNetwork {
       biases[i] = random(-varians,varians);
     }    
   }
+  NeuralNetwork(float[] _weights,float[] _biases)
+  {
+    weights = _weights;
+    biases = _biases;
+  }
 
   float getOutput(float x1, float x2, float x3) {
     //layer1

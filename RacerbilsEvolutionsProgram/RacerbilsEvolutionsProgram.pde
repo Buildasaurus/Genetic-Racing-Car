@@ -1,35 +1,58 @@
 //populationSize: Hvor mange "controllere" der genereres, controller = bil & hjerne & sensorer
-int       populationSize  = 100;     
-
+int     populationSize  = 100;     
+boolean pile = true;
 //CarSystem: Indholder en population af "controllere" 
 CarSystem carSystem       = new CarSystem(populationSize);
+Information information = new Information();
 
 //trackImage: RacerBanen , Vejen=sort, Udenfor=hvid, Målstreg= 100%grøn 
-PImage    trackImage;
+PImage trackImage;
+PImage Racerbil1;
+PImage Racerbil2;
+PImage guldBil;
+//PImage 
 
 void setup() {
   size(500, 600);
-  trackImage = loadImage("track.png");
+  trackImage = loadImage("Billede1.png");
+  Racerbil1 = loadImage("Racerbil Rød.png");
+  Racerbil2 = loadImage("Racerbil blå.png");
+  guldBil = loadImage("Racerbil Guld.png");
 }
 
 void draw() {
   clear();
   fill(255);
-  rect(0,50,1000,1000);
-  image(trackImage,0,80);  
+  noStroke();
+  rect(-300,-300,1000,1000);
+  stroke(2);
+  image(trackImage,5,5,490,590);  
 
+  carSystem.fitnessbestemmelse();
   carSystem.updateAndDisplay();
-  
+  information.display(carSystem.information.generation, carSystem.information.totalfitness);
+  if (frameCount%1400==0) 
+  {
+    //println("FJERN DEM DER KØRER UDENFOR BANEN frameCount: " + frameCount);
+    carSystem.bedreBiler(carSystem.CarControllerList);
+  }
+      
   //TESTKODE: Frastortering af dårlige biler, for hver gang der går 200 frame - f.eks. dem der kører uden for banen
-   if (frameCount%200==0) {
-      println("FJERN DEM DER KØRER UDENFOR BANEN frameCount: " + frameCount);
+   
+      /*
       for (int i = carSystem.CarControllerList.size()-1 ; i >= 0;  i--) {
         SensorSystem s = carSystem.CarControllerList.get(i).sensorSystem;
         if(s.whiteSensorFrameCount > 0){
           carSystem.CarControllerList.remove(carSystem.CarControllerList.get(i));
           //carSystem.NyCar();
          }
-      }
-    }
-    //
+      }*/
+}
+
+void keyReleased()
+{
+  if (key =='m' || key =='M')
+  {
+   pile ^= true;
+  }
 }

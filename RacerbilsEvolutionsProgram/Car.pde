@@ -1,17 +1,11 @@
 class Car {  
   //Bil - indeholder position & hastighed & "tegning"
-  PVector pos = new PVector(60, 232);
-  PVector vel = new PVector(0, 5);
-  
-  void turnCar(float turnAngle){
-    vel.rotate(turnAngle);
-  }
-
-  void displayCar() 
+  PVector pos = new PVector(160, 400);
+  PVector vel = new PVector(0, -5);
+  color lastpast = color(0,255,0);
+  void turnCar(float turnAngle)
   {
-    stroke(100);
-    fill(100);
-    ellipse(pos.x, pos.y, 10, 10);
+    vel.rotate(turnAngle);
   }
   
   void update(float nnu) 
