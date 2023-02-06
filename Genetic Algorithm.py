@@ -1,3 +1,4 @@
+from audioop import bias
 import math
 import random
 import pygame
@@ -17,16 +18,22 @@ running = True
 import numpy as np
 from math import pi
 
+sizess = [3,3,2]
+
 
 class NeuralNetwork:
-    def __init__(self):
-        self.sizes = [3, 3, 2]
+    def __init__(self, WB = None):
+        self.sizes = [3, 3, 2] #TODO MOVE THIS OUT
         self.weights = [np.random.randn(y, x) for x, y in zip(self.sizes[:-1], self.sizes[1:])]
         self.biases = [np.random.randn(y, 1) for y in self.sizes[1:]]
         i = 0
-        for bias in self.biases:
-            self.biases[i] = np.concatenate([np.array(j) for j in bias])
-            i += 1
+        if WB:
+            self.weights = WB[0]
+            self.biases = WB[1]
+        else:
+            for bias in self.biases:
+                self.biases[i] = np.concatenate([np.array(j) for j in bias])
+                i += 1
 
     def getOutput(self, a): #input is input neurons.
         for b, w in zip(self.biases, self.weights):
@@ -71,13 +78,17 @@ class Car:
     '''a single car, which also creates a neural network of its own, and senors of its own'''
     size = (10,10)
 
-    def __init__(self):
+    def __init__(self, WB = None):
         self.position = pygame.Vector2(195.0, 18.0)
-        self.velocity = pygame.Vector2(-0.5, 0)
-        self.network = NeuralNetwork()
+        self.velocity = pygame.Vector2(-1.5, 0)
         self.sensor = Sensors()
         self.laps = 0
         self.lastColor = (69, 115, 197, 255)
+        if WB:
+            self.network = NeuralNetwork(WB)
+        else:
+            self.network = NeuralNetwork()
+
 
     def updatePlacement(self):
         #update sensors
@@ -114,7 +125,8 @@ class Car:
         self.position += self.velocity
         
     def getPlacement(self):
-        return pygame.Rect(car.position[0], car.position[1], car.size[0], car.size[1])
+        return self.position
+        #return pygame.Rect(car.position[0], car.position[1], car.size[0], car.size[1])
 
 
     def rotateCar(self, angle):
@@ -122,22 +134,49 @@ class Car:
 
 
 class Carsystem: #all cars combined
-    car = []
-    def __init__(self, systemSize):
-        self.car = [Car() for i in range(systemSize)]
+    def __init__(self, systemSize, parents = None): #parents is a list of cars and fitness in tuples
+        self.car = []
+        if parents:
+            for i in range (systemSize):
+                weights = []
+                biases = []
+                #mixed weights
+                for j in range(len(sizess)-1):
+                    ting = mixedList(np.concatenate(parents[0].network.weights[j]), np.concatenate(parents[1].network.weights[j]))
+                    ting = np.reshape(ting, parents[1].network.weights[j].shape)
+                    weights.append(ting)
+                #mixed biases
+                for j in range(len(sizess)-1):
+                    ting = mixedList(parents[0].network.biases[j], parents[1].network.biases[j])
+                    ting = np.reshape(ting, parents[1].network.biases[j].shape)
+                    biases.append(ting)                
+                self.car.append(Car(WB = (weights,biases)))
+        else:
+            self.car = [Car() for i in range(systemSize)]
+            
 
 #Functions
 def sigmoid(z):
     return 1.0/(1.0+np.exp(-z))
         
-
+def mixedList(a, b):
+    nyList = []
+    for i in range (len(a)):
+        rand = random.randint(1,2)
+        if rand == 1:
+            nyList.append(a[i] + np.random.normal(0,0.1))
+        else:
+            nyList.append(b[i] + np.random.normal(0,0.1))
+    return nyList
 
 
 
 carsystem = Carsystem(100)
 background = pygame.image.load("lilleRacerbaneMedStreger.png")
+RacingCar = pygame.image.load("Racerbil Rød - lille.png")
 
 clock = pygame.time.Clock()  
+
 
 i = 0
 while running:
@@ -153,7 +192,7 @@ while running:
         car.updatePlacement()
     
     for car in carsystem.car:
-        pygame.draw.rect(window, pygame.Color("blue"), car.getPlacement())
+        window.blit(RacingCar, car.getPlacement())
     clock.tick(60)
 
     if i%60 == 0:
@@ -171,6 +210,25 @@ while running:
         for car in carsystem.car:
             strbuilder += " " + str(car.laps)
         print(strbuilder)
+
+    if i%1500 == 1499: # find new generation
+        maxfitness = (0,0) #(fitness, index)
+        secondbestFitness = (0,0)
+        j = 0
+        for car in carsystem.car:
+            if car.laps > maxfitness[0]:
+                secondbestFitness = maxfitness
+                maxfitness = (car.laps, j)
+            elif car.laps > secondbestFitness[0]:
+                secondbestFitness = (car.laps, j)
+            j += 1
+        parents=(carsystem.car[maxfitness[1]], carsystem.car[secondbestFitness[1]])
+        carsystem = []
+        carsystem = Carsystem(100, parents=parents)
+
+        
+
+
 
 
     i += 1
