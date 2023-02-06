@@ -2,7 +2,7 @@ class SensorSystem {
   //SensorSystem - alle bilens sensorer - ogå dem der ikke bruges af "hjernen"
   
   //wall detectors
-  int sensorMag = 50;
+  int sensorMag = 100;
   float sensorAngle = PI*2/8;
   
   PVector anchorPos           = new PVector();
@@ -29,22 +29,41 @@ class SensorSystem {
   int     lapTimeInFrames       = 10000;
 
   void displaySensors() {
-    strokeWeight(0.5);
-    fill(255, 0, 0);
-    ellipse(anchorPos.x+sensorVectorFront.x*frontSensorSignal/sensorMag, anchorPos.y+sensorVectorFront.y*frontSensorSignal/sensorMag, 8, 8);
-    ellipse( anchorPos.x+sensorVectorLeft.x*leftSensorSignal/sensorMag, anchorPos.y+sensorVectorLeft.y*leftSensorSignal/sensorMag, 8, 8);
-    ellipse( anchorPos.x+sensorVectorRight.x*rightSensorSignal/sensorMag, anchorPos.y+sensorVectorRight.y*rightSensorSignal/sensorMag, 8, 8);
-    line(anchorPos.x, anchorPos.y, anchorPos.x+sensorVectorFront.x*frontSensorSignal/sensorMag, anchorPos.y+sensorVectorFront.y*frontSensorSignal/sensorMag);
-    line(anchorPos.x, anchorPos.y, anchorPos.x+sensorVectorLeft.x*leftSensorSignal/sensorMag, anchorPos.y+sensorVectorLeft.y*leftSensorSignal/sensorMag);
-    line(anchorPos.x, anchorPos.y, anchorPos.x+sensorVectorRight.x*rightSensorSignal/sensorMag, anchorPos.y+sensorVectorRight.y*rightSensorSignal/sensorMag);
-
+    //bilen
+    imageMode(CENTER);
+    translate(anchorPos.x, anchorPos.y);
+    if (sensorVectorFront.x < 0)
+    {
+      rotate(atan(sensorVectorFront.y/sensorVectorFront.x)+PI);
+      image(Racerbil1, 0, 0, 20, 10);
+      rotate(-atan(sensorVectorFront.y/sensorVectorFront.x)+PI);
+    } else
+    {
+      rotate(atan(sensorVectorFront.y/sensorVectorFront.x));
+      image(Racerbil1, 0, 0, 20, 10);
+      rotate(-atan(sensorVectorFront.y/sensorVectorFront.x));
+    }
+    translate(-anchorPos.x, -anchorPos.y);
+    imageMode(CORNER);
+    
+    //sensorer
+    if(pile)
+    {
+      strokeWeight(0.5);
+      fill(255, 0, 0);
+      ellipse(anchorPos.x+sensorVectorFront.x*frontSensorSignal/sensorMag, anchorPos.y+sensorVectorFront.y*frontSensorSignal/sensorMag, 8, 8);
+      ellipse( anchorPos.x+sensorVectorLeft.x*leftSensorSignal/sensorMag, anchorPos.y+sensorVectorLeft.y*leftSensorSignal/sensorMag, 8, 8);
+      ellipse( anchorPos.x+sensorVectorRight.x*rightSensorSignal/sensorMag, anchorPos.y+sensorVectorRight.y*rightSensorSignal/sensorMag, 8, 8);
+      line(anchorPos.x, anchorPos.y, anchorPos.x+sensorVectorFront.x*frontSensorSignal/sensorMag, anchorPos.y+sensorVectorFront.y*frontSensorSignal/sensorMag);
+      line(anchorPos.x, anchorPos.y, anchorPos.x+sensorVectorLeft.x*leftSensorSignal/sensorMag, anchorPos.y+sensorVectorLeft.y*leftSensorSignal/sensorMag);
+      line(anchorPos.x, anchorPos.y, anchorPos.x+sensorVectorRight.x*rightSensorSignal/sensorMag, anchorPos.y+sensorVectorRight.y*rightSensorSignal/sensorMag);
+    }
     strokeWeight(2);
     if (whiteSensorFrameCount>0) {
       fill(whiteSensorFrameCount*10, 0, 0);
     } else {
       fill(0, clockWiseRotationFrameCounter, 0);
     }
-    ellipse(anchorPos.x, anchorPos.y, 10, 10);
   }
 
   void updateSensorsignals(PVector pos, PVector vel) {
@@ -61,7 +80,7 @@ class SensorSystem {
         }
         i = sensorMag;
       } 
-      else {frontSensorSignal = sensorMag;}
+      //else {frontSensorSignal = sensorMag;}
     }
      for (int i=1; i < sensorMag; i++)
     {
@@ -75,7 +94,7 @@ class SensorSystem {
         }
         i = sensorMag;
       } 
-      else {leftSensorSignal = sensorMag;}
+      //else {leftSensorSignal = sensorMag;}
     }
     for (int i=1; i < sensorMag; i++)
     {
@@ -83,16 +102,16 @@ class SensorSystem {
       if (get(int(pos.x+bob.x*i/sensorMag), int(pos.y+bob.y*i/sensorMag))==-1)
       {
         rightSensorSignal = i;
-        if (i==1)
+        if (i == 1)
         {
           rightSensorSignal = sensorMag;
         }
         i = sensorMag;
       } 
-      else {rightSensorSignal = sensorMag;}
+      //else {rightSensorSignal = sensorMag;}
     }  
     //Crash detector
-    color color_car_position = get(int(pos.x), int(pos.y));
+    /*color color_car_position = get(int(pos.x), int(pos.y));
     if (color_car_position ==-1) {
       whiteSensorFrameCount = whiteSensorFrameCount+1;
     }
@@ -112,7 +131,7 @@ class SensorSystem {
     float deltaHeading   =  lastRotationAngle - centerToCarVector.heading();
     clockWiseRotationFrameCounter  =  deltaHeading>0 ? clockWiseRotationFrameCounter + 1 : clockWiseRotationFrameCounter -1;
     lastRotationAngle = currentRotationAngle;
-    
+   */ 
     updateSensorVectors(vel);
     
     anchorPos.set(pos.x,pos.y);
