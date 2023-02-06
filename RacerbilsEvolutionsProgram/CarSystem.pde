@@ -8,6 +8,7 @@ class CarSystem {
   float mutation = 0.05;
   int mutantChance = 20;
   float udenforstraf = 0.02;
+  float bedsteBil = 0;
   
 
   CarSystem(int populationSize) 
@@ -42,6 +43,20 @@ class CarSystem {
           if (farvestreger[nyNyC] == controller.bil.lastpast)
           {
             controller.fitness = controller.fitness+1;
+            if (controller.fitness > bedsteBil)
+            {
+              
+              for (int k = 0; k < populationSize; k++) 
+              {
+                CarController controller2 = CarControllerList.get(k);
+                controller2.sensorSystem.bedsteBil = false;
+              }
+              controller.sensorSystem.bedsteBil = true;
+              bedsteBil++;
+            } else
+            {
+              controller.sensorSystem.bedsteBil = false;
+            }
             println("Linje: " + j + " er paserset");
             controller.bil.lastpast = farvestreger[nyC];
             break;
@@ -58,6 +73,7 @@ class CarSystem {
   {  
     information.generation++;
     information.totalfitness = 0;
+    bedsteBil=0;
     //Laver en pulje hvorfra der kan blive trukket et nummer fra
     ArrayList<Integer> pulje = new ArrayList<Integer>();
     for (int i = 0; i < _CarControllerList.size(); i++)
