@@ -29,6 +29,7 @@ class SensorSystem {
   int     lapTimeInFrames       = 10000;
 
   PImage currentBil = Racerbil1;
+  Boolean bedsteBil = false;
 
   void displaySensors() {
     //bilen
@@ -76,6 +77,10 @@ class SensorSystem {
     } else
     {
       currentBil = Racerbil1;
+    }
+    if (bedsteBil)
+    {
+      currentBil = guldBil;
     }
     for (int i=1; i < sensorMag; i++)
     {
