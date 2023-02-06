@@ -28,6 +28,8 @@ class SensorSystem {
   int     lastTimeInFrames      = 0;
   int     lapTimeInFrames       = 10000;
 
+  PImage currentBil = Racerbil1;
+
   void displaySensors() {
     //bilen
     imageMode(CENTER);
@@ -35,12 +37,12 @@ class SensorSystem {
     if (sensorVectorFront.x < 0)
     {
       rotate(atan(sensorVectorFront.y/sensorVectorFront.x)+PI);
-      image(Racerbil1, 0, 0, 20, 10);
+      image(currentBil, 0, 0, 20, 10);
       rotate(-atan(sensorVectorFront.y/sensorVectorFront.x)+PI);
     } else
     {
       rotate(atan(sensorVectorFront.y/sensorVectorFront.x));
-      image(Racerbil1, 0, 0, 20, 10);
+      image(currentBil, 0, 0, 20, 10);
       rotate(-atan(sensorVectorFront.y/sensorVectorFront.x));
     }
     translate(-anchorPos.x, -anchorPos.y);
@@ -68,6 +70,13 @@ class SensorSystem {
 
   void updateSensorsignals(PVector pos, PVector vel) {
     //Collision detectors
+    if (get(int(pos.x), int(pos.y)) == -1)
+    {
+      currentBil = Racerbil2;
+    } else
+    {
+      currentBil = Racerbil1;
+    }
     for (int i=1; i < sensorMag; i++)
     {
       PVector bob = sensorVectorFront;

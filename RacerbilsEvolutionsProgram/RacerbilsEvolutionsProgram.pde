@@ -9,10 +9,11 @@ Information information = new Information();
 PImage trackImage;
 PImage Racerbil1;
 PImage Racerbil2;
+//PImage 
 
 void setup() {
   size(500, 600);
-  trackImage = loadImage("track2.png");
+  trackImage = loadImage("Billede1.png");
   Racerbil1 = loadImage("Racerbil Rød.png");
   Racerbil2 = loadImage("Racerbil blå.png");
 }
@@ -20,13 +21,15 @@ void setup() {
 void draw() {
   clear();
   fill(255);
-  rect(0,50,1000,1000);
-  image(trackImage,0,80);  
+  noStroke();
+  rect(-300,-300,1000,1000);
+  stroke(2);
+  image(trackImage,5,5,490,590);  
 
   carSystem.fitnessbestemmelse();
   carSystem.updateAndDisplay();
   information.display(carSystem.information.generation, carSystem.information.totalfitness);
-  if (frameCount%400==0) 
+  if (frameCount%1000==0) 
   {
     //println("FJERN DEM DER KØRER UDENFOR BANEN frameCount: " + frameCount);
     carSystem.bedreBiler(carSystem.CarControllerList);

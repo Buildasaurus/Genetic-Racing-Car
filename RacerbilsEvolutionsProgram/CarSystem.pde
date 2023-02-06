@@ -42,6 +42,7 @@ class CarSystem {
           if (farvestreger[nyNyC] == controller.bil.lastpast)
           {
             controller.fitness = controller.fitness+1;
+            println("Linje: " + j + " er paserset");
             controller.bil.lastpast = farvestreger[nyC];
             break;
           }
