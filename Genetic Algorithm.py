@@ -1,6 +1,9 @@
 from audioop import bias
+from http.client import CannotSendRequest
+from lib2to3.pgen2.pgen import generate_grammar
 import math
 import random
+from tkinter import font
 import pygame
 
 '''
@@ -10,8 +13,8 @@ pr = cProfile.Profile()
 pr.enable()'''
 
 pygame.init()
-width = 440
-height = 600
+width = 1280
+height = 720
 gamespeed = 3
 window = pygame.display.set_mode((width,height))
 running = True
@@ -22,8 +25,8 @@ sizess = [3,3,2]
 
 
 class NeuralNetwork:
+    sizes = [3, 3, 2]
     def __init__(self, WB = None):
-        self.sizes = [3, 3, 2] #TODO MOVE THIS OUT
         self.weights = [np.random.randn(y, x) for x, y in zip(self.sizes[:-1], self.sizes[1:])]
         self.biases = [np.random.randn(y, 1) for y in self.sizes[1:]]
         i = 0
@@ -40,9 +43,6 @@ class NeuralNetwork:
             a = np.dot(w, a) + b
         return a
 
-    
-
-
 
 class Sensors(): #Sensors for each car
     magnitude = 20
@@ -52,19 +52,16 @@ class Sensors(): #Sensors for each car
     def __init__(self):
         self.sensorSignals = [0 for i in range(math.floor(-(self.sensorcount-1)/2), math.ceil(self.sensorcount/2))]
 
-    def updateSensorSignals(self, position, velocity): #velocity being the speed vector of the car
-        x = position[0]
-        y = position[1]
+    def updateSensorSignals(self, position, velocity):
         for i in range(math.floor(-(self.sensorcount-1)/2), math.ceil(self.sensorcount/2)):
             rotatedVelocity = velocity.rotate(2*i/(self.sensorcount)*self.angle)
             try:
                 sensorXY = rotatedVelocity.normalize()*self.magnitude + position
                 sensorXY = (int(sensorXY.x), int(sensorXY.y))
                 a = pygame.Surface.get_at(window, sensorXY)
-                pygame.Surface.set_at(window, sensorXY, pygame.Color("blue"))
+                pygame.Surface.set_at(window, sensorXY, (50,150,100,105))
 
-                
-                if a ==  pygame.Color("white"):
+                if a == pygame.Color("white"):
                     self.sensorSignals[i] = 0
                 else:
                     self.sensorSignals[i] = 1
@@ -76,14 +73,16 @@ class Sensors(): #Sensors for each car
 
 class Car: 
     '''a single car, which also creates a neural network of its own, and senors of its own'''
-    size = (10,10)
+    size = (1,1)
+    checkPointColors =  [(0, 255, 0, 255), (0, 0, 255, 255), (255, 0, 0, 255), (255, 0, 255, 255),  (0, 255, 255, 255)]
 
     def __init__(self, WB = None):
-        self.position = pygame.Vector2(195.0, 18.0)
-        self.velocity = pygame.Vector2(-1, 0)
+        self.position = pygame.Vector2(535.0, 500.0)
+        self.velocity = pygame.Vector2(0, -1)
         self.sensor = Sensors()
         self.laps = 0
-        self.lastColor = (69, 115, 197, 255)
+        self.color = "red"
+
         if WB:
             self.network = NeuralNetwork(WB)
         else:
@@ -94,9 +93,6 @@ class Car:
         #update sensors
         self.sensor.updateSensorSignals(self.position, self.velocity)
 
-        #update fitness - if crossed new checkpoint
-
-
         #give the sensors values as input
         output = self.network.getOutput(self.sensor.sensorSignals)
         degree = output[0] * gamespeed
@@ -104,30 +100,35 @@ class Car:
 
         #punish cars on white - and count laps
         try:
-            a = pygame.Surface.get_at(window, (int(self.position.x), int(self.position.y)))
-            if a == pygame.Color("white"):
+            surfaceColor = pygame.Surface.get_at(window, (int(self.position.x), int(self.position.y)))
+            if surfaceColor == pygame.Color("white"): #slow down cars on white
                 speed *= 0.1 
-            elif a == (1, 177, 81, 255) and self.lastColor != a: #if first time on green
+                self.color = "blue"
+            elif surfaceColor == self.checkPointColors[(self.laps + 1)%5]: #update fitness - if crossed new checkpoint
                 self.laps += 1
-                self.lastColor = a
-            elif a == (69, 115, 197, 255) and self.lastColor != a: #if first time on blue
-                self.laps += 1
-                self.lastColor = a
+                global bestCar
+                if self.laps > bestCar.laps:
+                    self.highestFitness = self.laps
+                    bestCar.color = "red"
+                    self.color = "gold"
+                    bestCar = self
+            elif self.color == "blue": #if just normal car that should be red
+                self.color = "red"
+
         except:
             speed = 0.0001
 
-
-
-
-        #return the new placement of the car.
+        #updaet the placement of the car.
         self.rotateCar(degree)
         self.velocity.scale_to_length(speed)
         self.position += self.velocity
         
     def getPlacement(self):
-        return self.position
-        #return pygame.Rect(car.position[0], car.position[1], car.size[0], car.size[1])
-
+        if self.color == "gold":
+            img_center = self.position - carSize
+        else:
+            img_center = self.position - tuple(q/2 for q in carSize)
+        return img_center
 
     def rotateCar(self, angle):
         self.velocity = self.velocity.rotate(angle)
@@ -164,19 +165,25 @@ def mixedList(a, b):
     for i in range (len(a)):
         rand = random.randint(1,2)
         if rand == 1:
-            nyList.append(a[i] + np.random.normal(0,0.1))
+            nyList.append(a[i] + np.random.normal(0,0.3))
         else:
-            nyList.append(b[i] + np.random.normal(0,0.1))
+            nyList.append(b[i] + np.random.normal(0,0.3))
     return nyList
 
 
-
 carsystem = Carsystem(100)
-background = pygame.image.load("lilleRacerbaneMedStreger.png")
-foreground = pygame.image.load("lilleRacerbaneMedStreger.png")
-RacingCar = pygame.image.load("Racerbil Rød - lille.png")
+bestCar = carsystem.car[0]
+background = pygame.image.load("Bagbillede.png")
+foreground = pygame.image.load("Racerbane ovenpå.png")
 
-clock = pygame.time.Clock()  
+carSize = (15,8)
+redCar = pygame.transform.scale(pygame.image.load("Racerbil Rød.png"),carSize)
+goldCar = pygame.transform.scale(pygame.image.load("Racerbil Guld.png"),tuple(q*2 for q in carSize))
+blueCar = pygame.transform.scale(pygame.image.load("Racerbil blå.png"),carSize)
+
+clock = pygame.time.Clock()
+generation = 0
+font = pygame.font.SysFont(None, 24)
 
 
 i = 0
@@ -188,18 +195,31 @@ while running:
     window.fill(pygame.Color("white"))
     window.blit(background, (0,0))
 
-
+    #update all cars placement
     for car in carsystem.car:
         car.updatePlacement()
 
-    
+    #print foreground and relevant text at top left
+    window.blit(foreground, (0,0))
+    img = font.render('Generation: ' + str(generation), True, (255,255,255,255))
+    window.blit(img, (width-400, 20))    
+
+    #display all cars
     for car in carsystem.car:
         a = pygame.Vector2(1, 0)
         ang = -a.angle_to(car.velocity)
-        rotcar = pygame.transform.rotate(RacingCar, ang)
-        window.blit(rotcar, car.getPlacement())
+        if car.color == "red":
+            rotatedCar = pygame.transform.rotate(redCar, ang)
+        elif car.color == "blue":
+            rotatedCar = pygame.transform.rotate(blueCar, ang)
+        else:
+            rotatedCar = pygame.transform.rotate(goldCar, ang)
+        window.blit(rotatedCar, car.getPlacement())
+
+
     clock.tick(60)
 
+    #print best car and fps
     if i%60 == 0:
         print(clock.get_fps())
         maxfitness = 0
@@ -212,8 +232,8 @@ while running:
                 secondbestFitness = car.laps
         print(maxfitness, secondbestFitness)
 
-
-    if i%1500 == 1499: # find new generation
+    # find new generation
+    if i%1500 == 1499:
         maxfitness = (0,0) #(fitness, index)
         secondbestFitness = (0,0)
         j = 0
@@ -227,6 +247,9 @@ while running:
         parents=(carsystem.car[maxfitness[1]], carsystem.car[secondbestFitness[1]])
         carsystem = []
         carsystem = Carsystem(100, parents=parents)
+        bestCar = carsystem.car[0]
+        generation += 1
+
 
         
 
