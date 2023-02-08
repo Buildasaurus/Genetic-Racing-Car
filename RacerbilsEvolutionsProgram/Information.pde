@@ -7,19 +7,19 @@ class Information
   {
     generation = g;
     totalfitness = tf;
-    fill(0);
+    fill(255);
     textSize(30);
-    text("generation: " + generation, 10, height-40);
-    text("Samlet fitness: " + totalfitness, 10, height-10);
+    text("generation: " + generation, width-400, 50);
+    text("Samlet fitness: " + totalfitness, width-400, 100);
     
     if (pile)
     {
       fill(0,200,0);
-      text("Sensorer synlig(M)", width-250, height-10);
+      text("Sensorer synlig(M)", width-400, 150);
     } else
     {
       fill(200,0,0);
-      text("Sensorer usynlig(M)", width-250, height-10);
+      text("Sensorer usynlig(M)", width-400, 150);
     }
   }
 }
