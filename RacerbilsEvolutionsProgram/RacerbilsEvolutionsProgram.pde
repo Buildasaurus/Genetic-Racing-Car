@@ -7,14 +7,16 @@ Information information = new Information();
 
 //trackImage: RacerBanen , Vejen=sort, Udenfor=hvid, Målstreg= 100%grøn 
 PImage trackImage;
+PImage forbillede;
 PImage Racerbil1;
 PImage Racerbil2;
 PImage guldBil;
 //PImage 
 
 void setup() {
-  size(500, 600);
-  trackImage = loadImage("Billede1.png");
+  size(1280, 720);
+  trackImage = loadImage("Bagbillede.png");
+  forbillede = loadImage("Forbillede.JPG");
   Racerbil1 = loadImage("Racerbil Rød.png");
   Racerbil2 = loadImage("Racerbil blå.png");
   guldBil = loadImage("Racerbil Guld.png");
@@ -26,12 +28,11 @@ void draw() {
   noStroke();
   rect(-300,-300,1000,1000);
   stroke(2);
-  image(trackImage,5,5,490,590);  
-
+  image(trackImage,0,0,width,height); 
   carSystem.fitnessbestemmelse();
   carSystem.updateAndDisplay();
   information.display(carSystem.information.generation, carSystem.information.totalfitness);
-  if (frameCount%1400==0) 
+  if (frameCount%1500==0) 
   {
     //println("FJERN DEM DER KØRER UDENFOR BANEN frameCount: " + frameCount);
     carSystem.bedreBiler(carSystem.CarControllerList);

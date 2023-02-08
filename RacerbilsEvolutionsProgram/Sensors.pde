@@ -38,12 +38,12 @@ class SensorSystem {
     if (sensorVectorFront.x < 0)
     {
       rotate(atan(sensorVectorFront.y/sensorVectorFront.x)+PI);
-      image(currentBil, 0, 0, 20, 10);
+      image(currentBil, 0, 0, 40, 20);
       rotate(-atan(sensorVectorFront.y/sensorVectorFront.x)+PI);
     } else
     {
       rotate(atan(sensorVectorFront.y/sensorVectorFront.x));
-      image(currentBil, 0, 0, 20, 10);
+      image(currentBil, 0, 0, 40, 20);
       rotate(-atan(sensorVectorFront.y/sensorVectorFront.x));
     }
     translate(-anchorPos.x, -anchorPos.y);
