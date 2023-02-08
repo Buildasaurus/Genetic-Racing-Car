@@ -5,7 +5,7 @@ class CarSystem {
   ArrayList<CarController> CarControllerList  = new ArrayList<CarController>();
   color[] farvestreger = {color(0,255,0), color(0,0,255),color(255,0,0),color(255,0,255),color(0,255,255)};
   Information information = new Information();
-  float mutation = 0.05;
+  float mutation = 0.02;
   int mutantChance = 20;
   float udenforstraf = 0.02;
   float bedsteBil = 0;
@@ -52,12 +52,12 @@ class CarSystem {
                 controller2.sensorSystem.bedsteBil = false;
               }
               controller.sensorSystem.bedsteBil = true;
-              bedsteBil++;
+              bedsteBil = controller.fitness;
             } else
             {
               controller.sensorSystem.bedsteBil = false;
             }
-            println("Linje: " + j + " er paserset");
+            //println("Linje: " + j + " er paserset");
             controller.bil.lastpast = farvestreger[nyC];
             break;
           }
@@ -79,34 +79,57 @@ class CarSystem {
     for (int i = 0; i < _CarControllerList.size(); i++)
     {
       CarController controller = _CarControllerList.get(i);
-      for (int j = 0; j < int(pow(controller.fitness,1.2)); j++)
+      for (int j = 0; j < int(pow(controller.fitness,1.5)); j++)
       {
         pulje.add(i);
-        information.totalfitness++;
       }
     }
-    
+   for (int i = 0; i < _CarControllerList.size(); i++)
+    {
+       CarController controller = _CarControllerList.get(i);
+       information.totalfitness += controller.fitness;
+    }
+    println("Pulje lavet med " + pulje.size() +  " elementer");
     //Laver en ny generation baseret på den tidliger generation
+    if (pulje.size() > 1) 
+    {
+      lavOgFjern(_CarControllerList, pulje);
+    }
+    else
+    {
+      lorteBiler(_CarControllerList);
+    }
+    
+  }
+  
+  void lavOgFjern (ArrayList<CarController> _CarControllerList, ArrayList<Integer> pulje)
+  {
     for (int i=0; i < populationSize; i++) 
     { 
       float[] weights = new float[10];
       float[] biases = {0,0,0,0}; 
+      int[] Mamabil = {int(random(0, pulje.size())),int(random(0, pulje.size()))};
+      while (Mamabil[0] == Mamabil[1])
+      {
+       Mamabil[1] = int(random(0, pulje.size()));
+      }
+      
       for (int j = 0; j < weights.length; j++) 
       {
-        int k = int(random(0, pulje.size()));
-        int mutantSker = int(random(1, mutantChance));
-        CarController gamleBil = _CarControllerList.get(pulje.get(k));
-        weights[j] = gamleBil.hjerne.weights[j];
-        if (mutantSker == 1)
-        {
-          weights[j] = weights[j] + random(-mutation, mutation);
+          int mutantSker = int(random(1, mutantChance));
+          int valgtGen = Mamabil[int(random(0 , 1))];
+          CarController gamleBil = _CarControllerList.get(pulje.get(valgtGen));
+          weights[j] = gamleBil.hjerne.weights[j];
+          if (mutantSker == 1)
+          {
+            weights[j] = weights[j] + random(-mutation, mutation);
+          }
         }
-      }
       for (int j=0; j < biases.length; j++) 
       {
-        int k = int(random(0, pulje.size()));
+        int valgtGen = Mamabil[int(random(0 , 1))];
         int mutantSker = int(random(1, mutantChance));
-        CarController gamle = _CarControllerList.get(pulje.get(k));
+        CarController gamle = _CarControllerList.get(pulje.get(valgtGen));
         biases[j] = gamle.hjerne.biases[j];
         if (mutantSker == 1)
         {
@@ -121,6 +144,20 @@ class CarSystem {
     {
       _CarControllerList.remove(0);
     }
+  }
+  
+  void lorteBiler (ArrayList<CarController> _CarControllerList)
+  {
+    for (int i = 0; i < populationSize; i++) 
+    {
+      _CarControllerList.remove(0);
+    } 
+    for (int i=0; i<populationSize; i++) { 
+      CarController controller = new CarController();
+      _CarControllerList.add(controller);
+    }
+    println("bilerne kunne ikke køre");
+    
   }
 
   void updateAndDisplay() {

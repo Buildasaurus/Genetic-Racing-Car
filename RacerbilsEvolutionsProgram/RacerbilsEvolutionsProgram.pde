@@ -32,7 +32,7 @@ void draw() {
   carSystem.fitnessbestemmelse();
   carSystem.updateAndDisplay();
   information.display(carSystem.information.generation, carSystem.information.totalfitness);
-  if (frameCount%1400==0) 
+  if (frameCount%1500==0) 
   {
     //println("FJERN DEM DER KØRER UDENFOR BANEN frameCount: " + frameCount);
     carSystem.bedreBiler(carSystem.CarControllerList);
