@@ -12,7 +12,7 @@ pr.enable()'''
 pygame.init()
 width = 440
 height = 600
-
+gamespeed = 3
 window = pygame.display.set_mode((width,height))
 running = True
 import numpy as np
@@ -80,7 +80,7 @@ class Car:
 
     def __init__(self, WB = None):
         self.position = pygame.Vector2(195.0, 18.0)
-        self.velocity = pygame.Vector2(-1.5, 0)
+        self.velocity = pygame.Vector2(-1, 0)
         self.sensor = Sensors()
         self.laps = 0
         self.lastColor = (69, 115, 197, 255)
@@ -99,8 +99,8 @@ class Car:
 
         #give the sensors values as input
         output = self.network.getOutput(self.sensor.sensorSignals)
-        degree = output[0] 
-        speed = sigmoid(output[1]) + 0.0001
+        degree = output[0] * gamespeed
+        speed = sigmoid(output[1])*gamespeed + 0.00001
 
         #punish cars on white - and count laps
         try:
@@ -173,6 +173,7 @@ def mixedList(a, b):
 
 carsystem = Carsystem(100)
 background = pygame.image.load("lilleRacerbaneMedStreger.png")
+foreground = pygame.image.load("lilleRacerbaneMedStreger.png")
 RacingCar = pygame.image.load("Racerbil Rød - lille.png")
 
 clock = pygame.time.Clock()  
@@ -190,9 +191,13 @@ while running:
 
     for car in carsystem.car:
         car.updatePlacement()
+
     
     for car in carsystem.car:
-        window.blit(RacingCar, car.getPlacement())
+        a = pygame.Vector2(1, 0)
+        ang = -a.angle_to(car.velocity)
+        rotcar = pygame.transform.rotate(RacingCar, ang)
+        window.blit(rotcar, car.getPlacement())
     clock.tick(60)
 
     if i%60 == 0:
@@ -206,10 +211,7 @@ while running:
             elif car.laps > secondbestFitness:
                 secondbestFitness = car.laps
         print(maxfitness, secondbestFitness)
-        strbuilder = ""
-        for car in carsystem.car:
-            strbuilder += " " + str(car.laps)
-        print(strbuilder)
+
 
     if i%1500 == 1499: # find new generation
         maxfitness = (0,0) #(fitness, index)
