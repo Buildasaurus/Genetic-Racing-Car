@@ -1,6 +1,3 @@
-from audioop import bias
-from http.client import CannotSendRequest
-from lib2to3.pgen2.pgen import generate_grammar
 import math
 import random
 from tkinter import font
@@ -11,7 +8,7 @@ import cProfile, pstats, io
 from pstats import SortKey
 pr = cProfile.Profile()
 pr.enable()'''
-
+print("Loading...")
 pygame.init()
 width = 1280
 height = 720
@@ -45,29 +42,32 @@ class NeuralNetwork:
 
 
 class Sensors(): #Sensors for each car
-    magnitude = 20
-    angle = 80
+    magnitude = 400
+    angle = 60
     sensorcount = 3
 
     def __init__(self):
         self.sensorSignals = [0 for i in range(math.floor(-(self.sensorcount-1)/2), math.ceil(self.sensorcount/2))]
 
     def updateSensorSignals(self, position, velocity):
-        for i in range(math.floor(-(self.sensorcount-1)/2), math.ceil(self.sensorcount/2)):
+        for i in range(math.floor(-(self.sensorcount-1)/2), math.ceil(self.sensorcount/2)): # for each sensor
+            # find the vector of the specific vector
             rotatedVelocity = velocity.rotate(2*i/(self.sensorcount)*self.angle)
-            try:
-                sensorXY = rotatedVelocity.normalize()*self.magnitude + position
-                sensorXY = (int(sensorXY.x), int(sensorXY.y))
-                a = pygame.Surface.get_at(window, sensorXY)
-                pygame.Surface.set_at(window, sensorXY, (50,150,100,105))
-
-                if a == pygame.Color("white"):
-                    self.sensorSignals[i] = 0
-                else:
-                    self.sensorSignals[i] = 1
-
+            self.sensorSignals[i] = 1 # set to 1 as standard, which it also will be if no white is within 100 pixels
+            try: # loop through all 100 pixels until a white one is found, if none is found, set value to 1. value is 0 if it right on top of car
+                j = 1
+                while j < self.magnitude:
+                    sensorXY = rotatedVelocity.normalize()*j + position
+                    sensorXY = (int(sensorXY.x), int(sensorXY.y))
+                    intpos = (int(position.x), int(position.y))
+                    a = pygame.Surface.get_at(window, sensorXY)
+                    if a == pygame.Color("white"):
+                        #pygame.draw.line(window, (155, 155, 155, 255), intpos, sensorXY)
+                        self.sensorSignals[i] = 5*j/self.magnitude
+                        break
+                    j *= 2
             except:
-                self.sensorSignals[i] = 1
+                pass
                 
 
 
@@ -76,9 +76,9 @@ class Car:
     size = (1,1)
     checkPointColors =  [(0, 255, 0, 255), (0, 0, 255, 255), (255, 0, 0, 255), (255, 0, 255, 255),  (0, 255, 255, 255)]
 
-    def __init__(self, WB = None):
-        self.position = pygame.Vector2(535.0, 500.0)
-        self.velocity = pygame.Vector2(0, -1)
+    def __init__(self, spawnPoint, startDirection, WB = None):
+        self.position = spawnPoint.copy()
+        self.velocity = startDirection.copy()
         self.sensor = Sensors()
         self.laps = 0
         self.color = "red"
@@ -135,8 +135,8 @@ class Car:
 
 
 class Carsystem: #all cars combined
-    def __init__(self, systemSize, parents = None): #parents is a list of cars and fitness in tuples
-        self.car = []
+    def __init__(self, spawnPoint, startDirection, systemSize, parents = None): #parents is a list of cars and fitness in tuples
+        self.cars = []
         if parents:
             for i in range (systemSize):
                 weights = []
@@ -151,9 +151,9 @@ class Carsystem: #all cars combined
                     ting = mixedList(parents[0].network.biases[j], parents[1].network.biases[j])
                     ting = np.reshape(ting, parents[1].network.biases[j].shape)
                     biases.append(ting)                
-                self.car.append(Car(WB = (weights,biases)))
+                self.cars.append(Car(spawnPoint,startDirection, WB = (weights,biases)))
         else:
-            self.car = [Car() for i in range(systemSize)]
+            self.cars = [Car(spawnPoint, startDirection) for i in range(systemSize)]
             
 
 #Functions
@@ -170,10 +170,12 @@ def mixedList(a, b):
             nyList.append(b[i] + np.random.normal(0,0.3))
     return nyList
 
-
-carsystem = Carsystem(100)
-bestCar = carsystem.car[0]
+spawnPoint = pygame.Vector2(535.0, 500.0)
+startDirection = pygame.Vector2(0, -1)
+carsystem = Carsystem(spawnPoint, startDirection, 100)
+bestCar = carsystem.cars[0]
 background = pygame.image.load("Bagbillede.png")
+#foreground = pygame.image.load("Bagbillede.png")
 foreground = pygame.image.load("Racerbane ovenpå.png")
 
 carSize = (15,8)
@@ -185,7 +187,6 @@ clock = pygame.time.Clock()
 generation = 0
 font = pygame.font.SysFont(None, 24)
 
-
 i = 0
 while running:
     for event in pygame.event.get():  
@@ -196,16 +197,16 @@ while running:
     window.blit(background, (0,0))
 
     #update all cars placement
-    for car in carsystem.car:
+    for car in carsystem.cars:
         car.updatePlacement()
 
     #print foreground and relevant text at top left
     window.blit(foreground, (0,0))
-    img = font.render('Generation: ' + str(generation), True, (255,255,255,255))
-    window.blit(img, (width-400, 20))    
+    text = font.render('Generation: ' + str(generation), True, (255,255,255,255))
+    window.blit(text, (width-400, 20))    
 
     #display all cars
-    for car in carsystem.car:
+    for car in carsystem.cars:
         a = pygame.Vector2(1, 0)
         ang = -a.angle_to(car.velocity)
         if car.color == "red":
@@ -224,7 +225,7 @@ while running:
         print(clock.get_fps())
         maxfitness = 0
         secondbestFitness = 0
-        for car in carsystem.car:
+        for car in carsystem.cars:
             if car.laps > maxfitness:
                 secondbestFitness = maxfitness
                 maxfitness = car.laps
@@ -234,28 +235,28 @@ while running:
 
     # find new generation
     if i%1500 == 1499:
+        if generation == 0:
+            spawnPoint = pygame.Vector2(400, 100.0) # find new spawnpoint
+            background = pygame.image.load("Racerbane og bil.png")
+            #foreground = pygame.image.load("Racerbane og bil.png")
+            foreground = pygame.image.load("Kattebane.png")
+            startDirection = pygame.Vector2(-1, 0)
         maxfitness = (0,0) #(fitness, index)
         secondbestFitness = (0,0)
         j = 0
-        for car in carsystem.car:
+        for car in carsystem.cars:
             if car.laps > maxfitness[0]:
                 secondbestFitness = maxfitness
                 maxfitness = (car.laps, j)
             elif car.laps > secondbestFitness[0]:
                 secondbestFitness = (car.laps, j)
             j += 1
-        parents=(carsystem.car[maxfitness[1]], carsystem.car[secondbestFitness[1]])
+        parents=(carsystem.cars[maxfitness[1]], carsystem.cars[secondbestFitness[1]])
         carsystem = []
-        carsystem = Carsystem(100, parents=parents)
-        bestCar = carsystem.car[0]
+        carsystem = Carsystem(spawnPoint, startDirection, 100, parents=parents)
+        bestCar = carsystem.cars[0]
         generation += 1
-
-
         
-
-
-
-
     i += 1
 
     # Update our window
