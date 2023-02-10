@@ -3,16 +3,17 @@ import random
 from tkinter import font
 import pygame
 
-'''
-import cProfile, pstats, io
+
+'''import cProfile, pstats, io
 from pstats import SortKey
 pr = cProfile.Profile()
 pr.enable()'''
+
 print("Loading...")
 pygame.init()
 width = 1280
 height = 720
-gamespeed = 3
+gamespeed = 2
 window = pygame.display.set_mode((width,height))
 running = True
 import numpy as np
@@ -155,6 +156,26 @@ class Carsystem: #all cars combined
         else:
             self.cars = [Car(spawnPoint, startDirection) for i in range(systemSize)]
             
+class Player:
+    def __init__(self, spawnPoint, startDirection):
+        self.position = spawnPoint.copy()
+        self.velocity = startDirection.copy()
+
+    def updatePlacement(self, speed, angle):
+        self.velocity = self.velocity.rotate(angle)
+        self.position += self.velocity
+        surfaceColor = pygame.Surface.get_at(window, (int(self.position.x), int(self.position.y)))
+        if surfaceColor == pygame.Color("white"): #slow down cars on white
+            speed *= 0.1 
+            self.color = "blue"
+        
+        self.velocity.scale_to_length(speed + 0.00001)
+
+
+    def getPlacement(self):
+        img_center = self.position - carSize
+        return img_center
+
 
 #Functions
 def sigmoid(z):
@@ -170,19 +191,23 @@ def mixedList(a, b):
             nyList.append(b[i] + np.random.normal(0,0.3))
     return nyList
 
+#Car Creation
 spawnPoint = pygame.Vector2(535.0, 500.0)
 startDirection = pygame.Vector2(0, -1)
-carsystem = Carsystem(spawnPoint, startDirection, 100)
+systemSize = 30
+carsystem = Carsystem(spawnPoint, startDirection, 30)   
 bestCar = carsystem.cars[0]
+player = Player(spawnPoint, startDirection)
+
+#images
 background = pygame.image.load("Bagbillede.png")
-#foreground = pygame.image.load("Bagbillede.png")
 foreground = pygame.image.load("Racerbane ovenpå.png")
-
 carSize = (15,8)
-redCar = pygame.transform.scale(pygame.image.load("Racerbil Rød.png"),carSize)
-goldCar = pygame.transform.scale(pygame.image.load("Racerbil Guld.png"),tuple(q*2 for q in carSize))
-blueCar = pygame.transform.scale(pygame.image.load("Racerbil blå.png"),carSize)
+redCar = pygame.transform.scale(pygame.image.load("Racerbil Rød.png"), carSize)
+goldCar = pygame.transform.scale(pygame.image.load("Racerbil Guld.png"), tuple(q*2 for q in carSize))
+blueCar = pygame.transform.scale(pygame.image.load("Racerbil blå.png"), carSize)
 
+#timing and generation
 clock = pygame.time.Clock()
 generation = 0
 font = pygame.font.SysFont(None, 24)
@@ -199,6 +224,20 @@ while running:
     #update all cars placement
     for car in carsystem.cars:
         car.updatePlacement()
+    #player car
+    playerSpeed = 0
+    playerAngle = 0
+    keys = pygame.key.get_pressed()
+    
+    if keys[pygame.K_LEFT]:
+        playerAngle -= gamespeed
+    if keys[pygame.K_RIGHT]:
+        playerAngle += gamespeed
+    if keys[pygame.K_UP]:
+        playerSpeed = gamespeed
+
+    
+    player.updatePlacement(playerSpeed, playerAngle)
 
     #print foreground and relevant text at top left
     window.blit(foreground, (0,0))
@@ -216,11 +255,12 @@ while running:
         else:
             rotatedCar = pygame.transform.rotate(goldCar, ang)
         window.blit(rotatedCar, car.getPlacement())
+    
+    
 
-
-    clock.tick(60)
 
     #print best car and fps
+    clock.tick(60)    
     if i%60 == 0:
         print(clock.get_fps())
         maxfitness = 0
@@ -238,7 +278,6 @@ while running:
         if generation == 0:
             spawnPoint = pygame.Vector2(400, 100.0) # find new spawnpoint
             background = pygame.image.load("Racerbane og bil.png")
-            #foreground = pygame.image.load("Racerbane og bil.png")
             foreground = pygame.image.load("Kattebane.png")
             startDirection = pygame.Vector2(-1, 0)
         maxfitness = (0,0) #(fitness, index)
@@ -253,19 +292,26 @@ while running:
             j += 1
         parents=(carsystem.cars[maxfitness[1]], carsystem.cars[secondbestFitness[1]])
         carsystem = []
-        carsystem = Carsystem(spawnPoint, startDirection, 100, parents=parents)
+        carsystem = Carsystem(spawnPoint, startDirection, systemSize, parents=parents)
         bestCar = carsystem.cars[0]
+        player = Player(spawnPoint, startDirection)
         generation += 1
         
     i += 1
+
+    #display car
+    a = pygame.Vector2(1, 0)
+    ang = -a.angle_to(player.velocity)
+    playerCar = pygame.transform.rotate(goldCar, ang)
+    window.blit(playerCar, player.getPlacement())
 
     # Update our window
     pygame.display.flip()
 
 
 # ... do something ...
-'''
-pr.disable()
+
+'''pr.disable()
 s = io.StringIO()
 sortby = SortKey.CUMULATIVE
 ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
