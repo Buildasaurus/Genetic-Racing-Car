@@ -1,4 +1,5 @@
 import math
+from operator import truediv
 import random
 from tkinter import font
 import pygame
@@ -19,11 +20,9 @@ running = True
 import numpy as np
 from math import pi
 
-sizess = [3,3,2]
-
 
 class NeuralNetwork:
-    sizes = [3, 3, 2]
+    sizes = [3, 6, 2]
     def __init__(self, WB = None):
         self.weights = [np.random.randn(y, x) for x, y in zip(self.sizes[:-1], self.sizes[1:])]
         self.biases = [np.random.randn(y, 1) for y in self.sizes[1:]]
@@ -45,7 +44,7 @@ class NeuralNetwork:
 class Sensors(): #Sensors for each car
     magnitude = 400
     angle = 60
-    sensorcount = 3
+    sensorcount = NeuralNetwork.sizes[0]
 
     def __init__(self):
         self.sensorSignals = [0 for i in range(math.floor(-(self.sensorcount-1)/2), math.ceil(self.sensorcount/2))]
@@ -96,7 +95,7 @@ class Car:
 
         #give the sensors values as input
         output = self.network.getOutput(self.sensor.sensorSignals)
-        degree = output[0] * gamespeed
+        degree = (sigmoid(output[0])-0.5) * 2 * gamespeed
         speed = sigmoid(output[1])*gamespeed + 0.00001
 
         #punish cars on white - and count laps
@@ -143,12 +142,12 @@ class Carsystem: #all cars combined
                 weights = []
                 biases = []
                 #mixed weights
-                for j in range(len(sizess)-1):
+                for j in range(len(NeuralNetwork.sizes)-1):
                     ting = mixedList(np.concatenate(parents[0].network.weights[j]), np.concatenate(parents[1].network.weights[j]))
                     ting = np.reshape(ting, parents[1].network.weights[j].shape)
                     weights.append(ting)
                 #mixed biases
-                for j in range(len(sizess)-1):
+                for j in range(len(NeuralNetwork.sizes)-1):
                     ting = mixedList(parents[0].network.biases[j], parents[1].network.biases[j])
                     ting = np.reshape(ting, parents[1].network.biases[j].shape)
                     biases.append(ting)                
@@ -282,7 +281,7 @@ def createNewGeneration(carsystem): #takes old generation as input
     player = Player(track.spawnPoint, track.startDirection)
     return carsystem, bestCar, player
 
-def displayInfo():
+def displayInfo(frames):
     window.blit(track.foreground, (0,0))
     
     #Generation counter
@@ -293,32 +292,52 @@ def displayInfo():
     text = font.render('Your Score: ' + str(player.laps), True, (255,255,255,255))
     window.blit(text, (width-200, 20))
 
+    #timer
+    text = font.render('Time: %.2f' % frames, True, (255,255,255,255))
+    window.blit(text, (width-200, 60))
+
 def refreshWindow():
     window.fill(pygame.Color("white"))
     window.blit(track.background, (0,0))
 
-def newLevelScreen():
+def newLevelScreen(firstTime = False):
+    #description
+    if firstTime:
+        message = ["--Complete a lap to win--", "Each time you complete a map", "the AI gets better"]
+        displayText(message, 10, (width/2, height/2))
     #countDown
     for i in range(3,0,-1):
-        refreshWindow()
-        displayInfo()
-        displayCars()
-        text = largeLetters.render(str(i), True, (255,255,255,255))
-        window.blit(text, (width/2, height/2))
-        pygame.display.flip()
-        time.sleep(1)
-    
-def winnerScreen():
+        displayText(str(i), 1, (width/2, height/2))
+
+
+def winnerScreen(seconds):
     #count placement
     place = 1
     for car in carsystem.cars:
         if car.laps >= 6:
             place += 1
+    margin = 30
+    #display place
     text = largeLetters.render("You placed: " + str(place), True, (255,255,255,255))
-    window.blit(text, (width/2-text.get_width()/2, height/2-text.get_height()/2))
+    window.blit(text, (width/2-text.get_width()/2, height/2-text.get_height()/2 - margin))
+    #display time
+    text = largeLetters.render("Your time was: %.2f" % seconds, True, (255,255,255,255))
+    window.blit(text, (width/2-text.get_width()/2, height/2-text.get_height()/2 + margin))
     pygame.display.flip()
     time.sleep(2)
     
+def displayText(texts, duration, coord):
+    refreshWindow()
+    displayInfo(0)
+    displayCars()
+    #description
+    margin = -largeLetters.render(texts[0], True, (255,255,255,255)).get_height()*(len(texts)-1)/2
+    for text in texts:
+        text = largeLetters.render(text, True, (255,255,255,255))
+        window.blit(text, (coord[0]-text.get_width()/2, coord[1]-text.get_height()/2 + margin))
+        margin += text.get_height()*1.2
+    pygame.display.flip()
+    time.sleep(duration)
 
 #Car Creation
 track = trackManager()
@@ -330,9 +349,9 @@ player = Player(track.spawnPoint, track.startDirection)
 clock = pygame.time.Clock()
 generation = 0
 largeLetters = font = pygame.font.SysFont(None, 100)
-font = pygame.font.SysFont(None, 24)
+font = pygame.font.SysFont(None, 36)
 i = 0
-newLevelScreen()
+newLevelScreen(firstTime=True)
 while running:
     for event in pygame.event.get():  
         if event.type == pygame.QUIT:  
@@ -345,18 +364,20 @@ while running:
     updateCarPlacemenet()
 
     #print foreground and relevant text at top left
-    displayInfo()
+    displayInfo(i/60)
 
     #display all cars
-    displayCars()  
+    displayCars()
 
     #print best car and fps
     if i%60 == 0:
+        
         printInfo()
 
     # find new generation - reset level
     if player.won:
-        winnerScreen()
+        winnerScreen(i/60)
+        i = 0
         if generation == 1:
             track.setLevel("catLevel")
         carsystem, bestCar, player = createNewGeneration(carsystem)
@@ -365,7 +386,6 @@ while running:
     
     #update framecounter
     i += 1
-
 
     # Update our window
     clock.tick(60)    
