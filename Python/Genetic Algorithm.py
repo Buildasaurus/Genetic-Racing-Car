@@ -126,9 +126,9 @@ class Car:
         
     def getPlacement(self):
         if self.color == "gold":
-            img_center = self.position - carSize
+            img_center = self.position - track.carSize
         else:
-            img_center = self.position - tuple(q/2 for q in carSize)
+            img_center = self.position - tuple(q/2 for q in track.carSize)
         return img_center
 
     def rotateCar(self, angle):
@@ -157,9 +157,11 @@ class Carsystem: #all cars combined
             self.cars = [Car(spawnPoint, startDirection) for i in range(systemSize)]
             
 class Player:
+    checkPointColors =  [(0, 255, 0, 255), (0, 0, 255, 255), (255, 0, 0, 255), (255, 0, 255, 255),  (0, 255, 255, 255)]
     def __init__(self, spawnPoint, startDirection):
         self.position = spawnPoint.copy()
         self.velocity = startDirection.copy()
+        self.laps = 0
 
     def updatePlacement(self, speed, angle):
         self.velocity = self.velocity.rotate(angle)
@@ -168,16 +170,37 @@ class Player:
         if surfaceColor == pygame.Color("white"): #slow down cars on white
             speed *= 0.1 
             self.color = "blue"
-        
+        elif surfaceColor == self.checkPointColors[(self.laps + 1)%5]: #update fitness - if crossed new checkpoint
+            self.laps += 1
         self.velocity.scale_to_length(speed + 0.00001)
 
 
     def getPlacement(self):
-        img_center = self.position - carSize
+        img_center = self.position - track.carSize
         return img_center
 
+class trackManager:
+    def __init__(self):
+        self.setLevel("jLevel")
+        self.carSize = (15,8)
+        self.redCar = pygame.transform.scale(pygame.image.load("../data/Racerbil Rød.png"), self.carSize)
+        self.goldCar = pygame.transform.scale(pygame.image.load("../data/Racerbil Guld.png"), tuple(q*2 for q in self.carSize))
+        self.blueCar = pygame.transform.scale(pygame.image.load("../data/Racerbil blå.png"), self.carSize)
+        self.systemSize = 50
 
-#Functions
+    def setLevel(self, level): #returns new spawnpoints, images etc.
+        if level == "jLevel":
+            self.spawnPoint = pygame.Vector2(535.0, 500.0)
+            self.startDirection = pygame.Vector2(0, -1)
+            self.background = pygame.image.load("../data/Background - J level.png")
+            self.foreground = pygame.image.load("../data/Foreground - J level.png")
+        if level == "catLevel": 
+            self.spawnPoint = pygame.Vector2(400, 100.0) # find new spawnpoint
+            self.background = pygame.image.load("../data/Background - Cat level.png")
+            self.foreground = pygame.image.load("../data/Foreground - Cat level.png")
+            self.startDirection = pygame.Vector2(-1, 0.2)
+            
+####Functions####
 def sigmoid(z):
     return 1.0/(1.0+np.exp(-z))
         
@@ -211,16 +234,16 @@ def displayCars():
     for car in carsystem.cars:
         ang = -a.angle_to(car.velocity)
         if car.color == "red":
-            rotatedCar = pygame.transform.rotate(redCar, ang)
+            rotatedCar = pygame.transform.rotate(track.redCar, ang)
         elif car.color == "blue":
-            rotatedCar = pygame.transform.rotate(blueCar, ang)
+            rotatedCar = pygame.transform.rotate(track.blueCar, ang)
         else:
-            rotatedCar = pygame.transform.rotate(goldCar, ang)
+            rotatedCar = pygame.transform.rotate(track.goldCar, ang)
         window.blit(rotatedCar, car.getPlacement())
     
     #display player
     ang = -a.angle_to(player.velocity)
-    playerCar = pygame.transform.rotate(goldCar, ang)
+    playerCar = pygame.transform.rotate(track.goldCar, ang)
     window.blit(playerCar, player.getPlacement())
 
 def printInfo():
@@ -248,38 +271,31 @@ def createNewGeneration(carsystem): #takes old generation as input
         j += 1
     parents=(carsystem.cars[maxfitness[1]], carsystem.cars[secondbestFitness[1]])
     carsystem = []
-    carsystem = Carsystem(spawnPoint, startDirection, systemSize, parents=parents)
+    carsystem = Carsystem(track.spawnPoint, track.startDirection, track.systemSize, parents=parents)
     bestCar = carsystem.cars[0]
-    player = Player(spawnPoint, startDirection)
+    player = Player(track.spawnPoint, track.startDirection)
     return carsystem, bestCar, player
 
-def newLevel(): #returns new spawnpoints, images etc.
-    spawnPoint = pygame.Vector2(400, 100.0) # find new spawnpoint
-    background = pygame.image.load("../data/Background - Cat level.png")
-    foreground = pygame.image.load("../data/Foreground - Cat level.png")
-    startDirection = pygame.Vector2(-1, 0.2)
-    return foreground, background, spawnPoint, startDirection
-
 def displayInfo():
-    window.blit(foreground, (0,0))
+    window.blit(track.foreground, (0,0))
+    
+    #Generation counter
     text = font.render('Generation: ' + str(generation), True, (255,255,255,255))
     window.blit(text, (width-400, 20))
 
-#Car Creation
-spawnPoint = pygame.Vector2(535.0, 500.0)
-startDirection = pygame.Vector2(0, -1)
-systemSize = 50
-carsystem = Carsystem(spawnPoint, startDirection, 30)   
-bestCar = carsystem.cars[0]
-player = Player(spawnPoint, startDirection)
+    #Player score
+    text = font.render('Your Score: ' + str(player.laps), True, (255,255,255,255))
+    window.blit(text, (width-200, 20))
 
-#images
-background = pygame.image.load("../data/Background - J level.png")
-foreground = pygame.image.load("../data/Foreground - J level.png")
-carSize = (15,8)
-redCar = pygame.transform.scale(pygame.image.load("../data/Racerbil Rød.png"), carSize)
-goldCar = pygame.transform.scale(pygame.image.load("../data/Racerbil Guld.png"), tuple(q*2 for q in carSize))
-blueCar = pygame.transform.scale(pygame.image.load("../data/Racerbil blå.png"), carSize)
+def refreshWindow():
+    window.fill(pygame.Color("white"))
+    window.blit(track.background, (0,0))
+
+#Car Creation
+track = trackManager()
+carsystem = Carsystem(track.spawnPoint, track.startDirection, 30)   
+bestCar = carsystem.cars[0]
+player = Player(track.spawnPoint, track.startDirection)
 
 #timing and generation
 clock = pygame.time.Clock()
@@ -293,9 +309,8 @@ while running:
            running = False
 
     # set background color to our window
-    window.fill(pygame.Color("white"))
-    window.blit(background, (0,0))
-
+    refreshWindow()
+    
     #update all cars placement
     updateCarPlacemenet()
 
@@ -309,10 +324,10 @@ while running:
     if i%60 == 0:
         printInfo()
 
-    # find new generation
+    # find new generation - reset level
     if i%1500 == 1499:
         if generation == 1:
-            foreground, background, spawnPoint, startDirection = newLevel()
+            track.setLevel("catLevel")
         carsystem, bestCar, player = createNewGeneration(carsystem)
         generation += 1
     
