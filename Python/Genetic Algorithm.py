@@ -13,7 +13,7 @@ print("Loading...")
 pygame.init()
 width = 1280
 height = 720
-gamespeed = 2
+gamespeed = 4
 window = pygame.display.set_mode((width,height))
 running = True
 import numpy as np
@@ -162,6 +162,7 @@ class Player:
         self.position = spawnPoint.copy()
         self.velocity = startDirection.copy()
         self.laps = 0
+        self.won = False
 
     def updatePlacement(self, speed, angle):
         self.velocity = self.velocity.rotate(angle)
@@ -172,6 +173,9 @@ class Player:
             self.color = "blue"
         elif surfaceColor == self.checkPointColors[(self.laps + 1)%5]: #update fitness - if crossed new checkpoint
             self.laps += 1
+            if self.laps == 6:
+                self.won = True
+
         self.velocity.scale_to_length(speed + 0.00001)
 
 
@@ -186,17 +190,19 @@ class trackManager:
         self.redCar = pygame.transform.scale(pygame.image.load("../data/Racerbil Rød.png"), self.carSize)
         self.goldCar = pygame.transform.scale(pygame.image.load("../data/Racerbil Guld.png"), tuple(q*2 for q in self.carSize))
         self.blueCar = pygame.transform.scale(pygame.image.load("../data/Racerbil blå.png"), self.carSize)
-        self.systemSize = 50
+        self.systemSize = 80
 
     def setLevel(self, level): #returns new spawnpoints, images etc.
         if level == "jLevel":
             self.spawnPoint = pygame.Vector2(535.0, 500.0)
             self.startDirection = pygame.Vector2(0, -1)
             self.background = pygame.image.load("../data/Background - J level.png")
+            #self.foreground=self.background
             self.foreground = pygame.image.load("../data/Foreground - J level.png")
         if level == "catLevel": 
             self.spawnPoint = pygame.Vector2(400, 100.0) # find new spawnpoint
             self.background = pygame.image.load("../data/Background - Cat level.png")
+            #self.foreground=self.background
             self.foreground = pygame.image.load("../data/Foreground - Cat level.png")
             self.startDirection = pygame.Vector2(-1, 0.2)
             
@@ -302,10 +308,21 @@ def newLevelScreen():
         pygame.display.flip()
         time.sleep(1)
     
+def winnerScreen():
+    #count placement
+    place = 1
+    for car in carsystem.cars:
+        if car.laps >= 6:
+            place += 1
+    text = largeLetters.render("You placed: " + str(place), True, (255,255,255,255))
+    window.blit(text, (width/2-text.get_width()/2, height/2-text.get_height()/2))
+    pygame.display.flip()
+    time.sleep(2)
+    
 
 #Car Creation
 track = trackManager()
-carsystem = Carsystem(track.spawnPoint, track.startDirection, 30)   
+carsystem = Carsystem(track.spawnPoint, track.startDirection, track.systemSize)   
 bestCar = carsystem.cars[0]
 player = Player(track.spawnPoint, track.startDirection)
 
@@ -338,7 +355,8 @@ while running:
         printInfo()
 
     # find new generation - reset level
-    if i%1500 == 1499:
+    if player.won:
+        winnerScreen()
         if generation == 1:
             track.setLevel("catLevel")
         carsystem, bestCar, player = createNewGeneration(carsystem)
