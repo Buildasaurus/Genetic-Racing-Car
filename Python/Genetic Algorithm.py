@@ -2,7 +2,7 @@ import math
 import random
 from tkinter import font
 import pygame
-
+import time
 
 '''import cProfile, pstats, io
 from pstats import SortKey
@@ -291,6 +291,18 @@ def refreshWindow():
     window.fill(pygame.Color("white"))
     window.blit(track.background, (0,0))
 
+def newLevelScreen():
+    #countDown
+    for i in range(3,0,-1):
+        refreshWindow()
+        displayInfo()
+        displayCars()
+        text = largeLetters.render(str(i), True, (255,255,255,255))
+        window.blit(text, (width/2, height/2))
+        pygame.display.flip()
+        time.sleep(1)
+    
+
 #Car Creation
 track = trackManager()
 carsystem = Carsystem(track.spawnPoint, track.startDirection, 30)   
@@ -300,9 +312,10 @@ player = Player(track.spawnPoint, track.startDirection)
 #timing and generation
 clock = pygame.time.Clock()
 generation = 0
+largeLetters = font = pygame.font.SysFont(None, 100)
 font = pygame.font.SysFont(None, 24)
-
 i = 0
+newLevelScreen()
 while running:
     for event in pygame.event.get():  
         if event.type == pygame.QUIT:  
@@ -329,10 +342,12 @@ while running:
         if generation == 1:
             track.setLevel("catLevel")
         carsystem, bestCar, player = createNewGeneration(carsystem)
+        newLevelScreen()
         generation += 1
     
     #update framecounter
     i += 1
+
 
     # Update our window
     clock.tick(60)    
