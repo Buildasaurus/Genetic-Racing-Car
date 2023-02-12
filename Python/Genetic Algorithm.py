@@ -33,7 +33,7 @@ class NeuralNetwork:
                 self.biases[i] = np.concatenate([np.array(j) for j in bias])
                 i += 1
 
-    def getOutput(self, a): #input is input neurons.
+    def getOutput(self, a): #a is input neurons.
         for b, w in zip(self.biases, self.weights):
             a = np.dot(w, a) + b
         return a
@@ -51,7 +51,7 @@ class Sensors(): #Sensors for each car
         for i in range(math.floor(-(self.sensorcount-1)/2), math.ceil(self.sensorcount/2)): # for each sensor
             # find the vector of the specific vector
             rotatedVelocity = velocity.rotate(i/2*self.angle)
-            self.sensorSignals[i] = 1 # set to 1 as standard, which it also will be if no white is within 100 pixels
+            self.sensorSignals[i] = 1 # set to 1 as standard, which it also will be if no white is within magnitude
             try: # loop through all 100 pixels until a white one is found, if none is found, set value to 1. value is 0 if it right on top of car
                 j = 1
                 while j < self.magnitude:
@@ -211,11 +211,13 @@ def sigmoid(z):
 def mixedList(a, b):
     nyList = []
     for i in range (len(a)):
-        rand = random.randint(1,2)
-        if rand == 1:
-            nyList.append(a[i] + np.random.normal(0,0.3))
-        else:
-            nyList.append(b[i] + np.random.normal(0,0.3))
+        rand = random.uniform(0, 1)
+        if rand < 0.025 or rand > 0.975: #random wild mutation
+            nyList.append(np.random.normal(0, 5))
+        elif rand < 0.5:
+            nyList.append(a[i] + np.random.normal(0,0.3)) #small certain mutation
+        elif rand > 0.5:
+            nyList.append(b[i] + np.random.normal(0,0.3)) #small certain mutation
     return nyList
 
 def updateCarPlacemenet():
@@ -294,7 +296,7 @@ def refreshWindow():
 def newLevelScreen(firstTime = False):
     #description
     if firstTime:
-        message = ["--Complete a lap to win--", "Each time you complete a map", "the AI gets better"]
+        message = ["--Complete a lap to win--", "Each time you complete a lap", "the AI gets better.", "*(Use arrow keys to drive)*"]
         displayText(message, 10, (width/2, height/2))
     #countDown
     for i in range(3,0,-1):
