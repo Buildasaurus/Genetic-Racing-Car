@@ -1,9 +1,10 @@
 import math
-from operator import truediv
 import random
 from tkinter import font
 import pygame
 import time
+import numpy as np
+from math import pi
 
 '''import cProfile, pstats, io
 from pstats import SortKey
@@ -14,15 +15,12 @@ print("Loading...")
 pygame.init()
 width = 1280
 height = 720
-gamespeed = 4
+gamespeed = 2
 window = pygame.display.set_mode((width,height))
 running = True
-import numpy as np
-from math import pi
-
 
 class NeuralNetwork:
-    sizes = [3, 6, 2]
+    sizes = [3, 3, 2]
     def __init__(self, WB = None):
         self.weights = [np.random.randn(y, x) for x, y in zip(self.sizes[:-1], self.sizes[1:])]
         self.biases = [np.random.randn(y, 1) for y in self.sizes[1:]]
@@ -52,7 +50,7 @@ class Sensors(): #Sensors for each car
     def updateSensorSignals(self, position, velocity):
         for i in range(math.floor(-(self.sensorcount-1)/2), math.ceil(self.sensorcount/2)): # for each sensor
             # find the vector of the specific vector
-            rotatedVelocity = velocity.rotate(2*i/(self.sensorcount)*self.angle)
+            rotatedVelocity = velocity.rotate(i/2*self.angle)
             self.sensorSignals[i] = 1 # set to 1 as standard, which it also will be if no white is within 100 pixels
             try: # loop through all 100 pixels until a white one is found, if none is found, set value to 1. value is 0 if it right on top of car
                 j = 1
@@ -108,7 +106,6 @@ class Car:
                 self.laps += 1
                 global bestCar
                 if self.laps > bestCar.laps:
-                    self.highestFitness = self.laps
                     bestCar.color = "red"
                     self.color = "gold"
                     bestCar = self
@@ -135,21 +132,23 @@ class Car:
 
 
 class Carsystem: #all cars combined
-    def __init__(self, spawnPoint, startDirection, systemSize, parents = None): #parents is a list of cars and fitness in tuples
+    def __init__(self, spawnPoint, startDirection, systemSize, parents = None): #parents is a list of cars
         self.cars = []
         if parents:
             for i in range (systemSize):
                 weights = []
                 biases = []
+                parent0 = parents[random.randint(0,len(parents)-1)]
+                parent1 = parents[random.randint(0,len(parents)-1)]
                 #mixed weights
                 for j in range(len(NeuralNetwork.sizes)-1):
-                    ting = mixedList(np.concatenate(parents[0].network.weights[j]), np.concatenate(parents[1].network.weights[j]))
-                    ting = np.reshape(ting, parents[1].network.weights[j].shape)
+                    ting = mixedList(np.concatenate(parent0.network.weights[j]), np.concatenate(parent1.network.weights[j]))
+                    ting = np.reshape(ting, parent1.network.weights[j].shape)
                     weights.append(ting)
                 #mixed biases
                 for j in range(len(NeuralNetwork.sizes)-1):
-                    ting = mixedList(parents[0].network.biases[j], parents[1].network.biases[j])
-                    ting = np.reshape(ting, parents[1].network.biases[j].shape)
+                    ting = mixedList(parent0.network.biases[j], parent1.network.biases[j])
+                    ting = np.reshape(ting, parent1.network.biases[j].shape)
                     biases.append(ting)                
                 self.cars.append(Car(spawnPoint,startDirection, WB = (weights,biases)))
         else:
@@ -263,18 +262,10 @@ def printInfo():
             secondbestFitness = car.laps
     print(maxfitness, secondbestFitness)
 
-def createNewGeneration(carsystem): #takes old generation as input
-    maxfitness = (0,0) #(fitness, index)
-    secondbestFitness = (0,0)
-    j = 0
-    for car in carsystem.cars:
-        if car.laps > maxfitness[0]:
-            secondbestFitness = maxfitness
-            maxfitness = (car.laps, j)
-        elif car.laps > secondbestFitness[0]:
-            secondbestFitness = (car.laps, j)
-        j += 1
-    parents=(carsystem.cars[maxfitness[1]], carsystem.cars[secondbestFitness[1]])
+def createNewGeneration(carsystem, parentCount): #takes old generation as input
+
+    carsystem.cars.sort(key=lambda x: x.laps, reverse = True)    
+    parents=(carsystem.cars[0:parentCount])
     carsystem = []
     carsystem = Carsystem(track.spawnPoint, track.startDirection, track.systemSize, parents=parents)
     bestCar = carsystem.cars[0]
@@ -380,7 +371,7 @@ while running:
         i = 0
         if generation == 1:
             track.setLevel("catLevel")
-        carsystem, bestCar, player = createNewGeneration(carsystem)
+        carsystem, bestCar, player = createNewGeneration(carsystem, 4)
         newLevelScreen()
         generation += 1
     
